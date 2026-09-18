@@ -237,7 +237,7 @@ const socials = [
 function Marquee() {
   const items = Array.from({ length: 8 });
   return (
-    <div className="relative overflow-hidden border-y border-zinc-200/70 bg-zinc-50/80 py-5">
+    <div className="relative z-10 overflow-hidden border-y border-zinc-200/70 bg-zinc-50/80 py-5">
       <motion.div
         animate={{ x: ["0%", "-50%"] }}
         transition={{ duration: 22, repeat: Infinity, ease: "linear" }}
@@ -444,9 +444,24 @@ function FeatureCard({
   );
 }
 
+const LENS_SIZE = 320;
+
 export default function ComingSoon() {
   const heroRef = useRef<HTMLDivElement>(null);
   const peekRef = useRef<HTMLDivElement>(null);
+
+  // Frosted lens that follows the cursor / touch across the whole page
+  const [lensVisible, setLensVisible] = useState(false);
+  const lensX = useMotionValue(-LENS_SIZE);
+  const lensY = useMotionValue(-LENS_SIZE);
+  const lensXSmooth = useSpring(lensX, { damping: 26, stiffness: 260 });
+  const lensYSmooth = useSpring(lensY, { damping: 26, stiffness: 260 });
+
+  function moveLens(e: React.PointerEvent<HTMLElement>) {
+    lensX.set(e.clientX - LENS_SIZE / 2);
+    lensY.set(e.clientY - LENS_SIZE / 2);
+    setLensVisible(true);
+  }
 
   // Page-wide scroll progress bar
   const { scrollYProgress: pageProgress } = useScroll();
@@ -476,17 +491,38 @@ export default function ComingSoon() {
   const peekOpacity = useTransform(smoothPeek, [0, 0.4], [0, 1]);
 
   return (
-    <div className="relative w-full overflow-x-clip bg-[#fbfaff] text-zinc-900">
+    <div
+      onPointerMove={moveLens}
+      onPointerDown={moveLens}
+      onPointerLeave={() => setLensVisible(false)}
+      className="relative w-full overflow-x-clip bg-[#fbfaff] text-zinc-900"
+    >
       {/* Scroll progress bar */}
       <motion.div
         style={{ scaleX: progressScale }}
         className="fixed inset-x-0 top-0 z-50 h-1 origin-left bg-gradient-to-r from-violet-500 via-pink-500 to-orange-500"
       />
 
+      {/* Soft cursor lens above every section, below the progress bar */}
+      <motion.div
+        aria-hidden="true"
+        style={{
+          x: lensXSmooth,
+          y: lensYSmooth,
+          width: LENS_SIZE,
+          height: LENS_SIZE,
+        }}
+        className={`pointer-events-none fixed left-0 top-0 z-40 rounded-full transition-opacity duration-300 ${
+          lensVisible ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <div className="h-full w-full rounded-full bg-white/5 backdrop-blur-[6px] [mask-image:radial-gradient(circle,black_0%,rgba(0,0,0,0.65)_25%,rgba(0,0,0,0.2)_50%,transparent_72%)]" />
+      </motion.div>
+
       {/* ============ HERO ============ */}
       <section
         ref={heroRef}
-        className="group/hero relative flex min-h-screen flex-col items-center justify-center overflow-hidden"
+        className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden"
       >
         {/* Blurred website screenshot as background */}
         <motion.div
@@ -498,32 +534,13 @@ export default function ComingSoon() {
             alt=""
             fill
             priority
-            className="object-cover blur-2xl brightness-[1.02] saturate-[1.15] transition-[filter] duration-700 ease-out group-hover/hero:blur-[12px]"
+            className="object-cover blur-[12px] brightness-[1.02] saturate-[1.15]"
           />
         </motion.div>
 
-        {/* Overlays: soft white tint + vignette (fade out on hover so image shows) */}
-        <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/25 to-[#fbfaff] transition-opacity duration-700 group-hover/hero:opacity-30" />
+        {/* Overlays: soft white tint + vignette */}
+        <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/25 to-[#fbfaff] opacity-30" />
         <div className="pointer-events-none absolute inset-0 [background:radial-gradient(ellipse_at_center,transparent_40%,#fbfaff_92%)]" />
-
-        {/* Floating glow orbs */}
-        <motion.div
-          animate={{ y: [0, -30, 0], x: [0, 20, 0] }}
-          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-          className="pointer-events-none absolute left-[12%] top-[22%] h-72 w-72 rounded-full bg-purple-400/30 blur-[100px] transition-opacity duration-700 group-hover/hero:opacity-0"
-        />
-        <motion.div
-          animate={{ y: [0, 35, 0], x: [0, -25, 0] }}
-          transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
-          className="pointer-events-none absolute bottom-[18%] right-[10%] h-80 w-80 rounded-full bg-orange-400/25 blur-[110px] transition-opacity duration-700 group-hover/hero:opacity-0"
-        />
-
-        {/* Slowly rotating conic halo behind the title */}
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 24, repeat: Infinity, ease: "linear" }}
-          className="pointer-events-none absolute left-1/2 top-1/2 h-[620px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-20 blur-[90px] transition-opacity duration-700 group-hover/hero:opacity-0 [background:conic-gradient(from_0deg,#8b5cf6,#ec4899,#f97316,#8b5cf6)]"
-        />
 
         {/* Hero content */}
         <motion.div
@@ -596,7 +613,7 @@ export default function ComingSoon() {
       {/* ============ SNEAK PEEK (still under wraps) ============ */}
       <section
         ref={peekRef}
-        className="relative flex flex-col items-center px-6 py-32"
+        className="relative z-10 flex flex-col items-center px-6 py-32"
       >
         <motion.div
           variants={fadeUp}
@@ -702,7 +719,7 @@ export default function ComingSoon() {
       </section>
 
       {/* ============ FEATURES ============ */}
-      <section className="relative mx-auto max-w-6xl px-6 py-24">
+      <section className="relative z-10 mx-auto max-w-6xl px-6 py-24">
         <motion.div
           variants={fadeUp}
           initial="hidden"
@@ -728,7 +745,7 @@ export default function ComingSoon() {
       </section>
 
       {/* ============ CTA / FOOTER ============ */}
-      <section className="relative overflow-hidden px-6 py-32">
+      <section className="relative z-10 overflow-hidden px-6 py-32">
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-[500px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-violet-600/15 via-pink-500/15 to-orange-500/15 blur-[120px]" />
         <motion.div
           variants={fadeUp}
