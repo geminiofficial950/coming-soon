@@ -1,9 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   motion,
+  MotionConfig,
+  useReducedMotion,
+  useInView,
   useScroll,
   useTransform,
   useSpring,
@@ -12,53 +15,47 @@ import {
   type Variants,
 } from "motion/react";
 
-const letterContainer: Variants = {
-  hidden: {},
-  visible: {
-    transition: { staggerChildren: 0.06, delayChildren: 0.4 },
-  },
-};
-
-const letter: Variants = {
-  hidden: { opacity: 0, y: 60, rotateX: 90, filter: "blur(12px)" },
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 56, rotateX: 12, transformPerspective: 1000 },
   visible: {
     opacity: 1,
     y: 0,
     rotateX: 0,
-    filter: "blur(0px)",
-    transition: { type: "spring", damping: 14, stiffness: 120 },
-  },
-};
-
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 40 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 1, ease: [0.16, 1, 0.3, 1] },
   },
 };
 
 function AnimatedTitle({ text }: { text: string }) {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const inView = useInView(titleRef, { margin: "100px" });
+  const words = text.split(" ");
+
   return (
     <motion.h1
-      variants={letterContainer}
-      initial="hidden"
-      animate="visible"
-      className="flex flex-col items-center gap-1 font-display text-7xl font-bold tracking-tight sm:flex-row sm:gap-[0.35em] sm:text-8xl lg:text-9xl"
-      style={{ perspective: 800 }}
+      ref={titleRef}
+      initial={{ scale: 1.25, rotateX: 16 }}
+      animate={{ scale: 1, rotateX: 0 }}
+      transition={{ delay: 0.65, duration: 1.8, ease: [0.16, 1, 0.3, 1] }}
+      className="launch-title flex flex-col items-center gap-1 font-display text-7xl font-bold tracking-tight sm:flex-row sm:gap-[0.35em] sm:text-8xl lg:text-9xl"
+      style={{ perspective: 1100 }}
+      data-active={inView}
       aria-label={text}
     >
-      {text.split(" ").map((word, wi) => (
-        <span key={wi} className="flex">
-          {word.split("").map((char, ci) => (
-            <motion.span
-              key={ci}
-              variants={letter}
-              className="animate-shimmer inline-block bg-gradient-to-r from-zinc-900 via-pink-500 to-zinc-900 bg-clip-text text-transparent"
-            >
-              {char}
-            </motion.span>
+      {words.map((word, wi) => (
+        <span
+          key={wi}
+          className="launch-word relative inline-block"
+          style={{
+            "--word-delay": `${0.65 + wi * 0.15}s`,
+            "--echo-delay": `${5 + wi * 0.15}s`,
+          } as CSSProperties}
+          aria-hidden="true"
+        >
+          <span className="invisible">{word}</span>
+          {["top", "middle", "bottom"].map((slice) => (
+            <span key={slice} className={`launch-slice launch-slice--${slice}`}>
+              <span className="launch-slice-fill">{word}</span>
+            </span>
           ))}
         </span>
       ))}
@@ -80,14 +77,21 @@ function getTimeLeft() {
 }
 
 function Countdown() {
+  const reducedMotion = useReducedMotion();
+  const countdownRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(countdownRef, { margin: "100px" });
   // null until mounted so the server and first client render match
   const [time, setTime] = useState<ReturnType<typeof getTimeLeft> | null>(null);
 
   useEffect(() => {
-    setTime(getTimeLeft());
+    if (!inView) return;
+    const firstTick = setTimeout(() => setTime(getTimeLeft()), 0);
     const id = setInterval(() => setTime(getTimeLeft()), 1000);
-    return () => clearInterval(id);
-  }, []);
+    return () => {
+      clearTimeout(firstTick);
+      clearInterval(id);
+    };
+  }, [inView]);
 
   const entries = time
     ? Object.entries(time)
@@ -96,12 +100,12 @@ function Countdown() {
       );
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-5">
+    <div ref={countdownRef} className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-5" style={{ perspective: 1000 }}>
       {entries.map(([label, value], i) => (
         <motion.div
           key={label}
-          initial={{ opacity: 0, y: 40, scale: 0.9 }}
-          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          initial={{ opacity: 0, y: 55, rotateX: -65, scale: 0.88 }}
+          whileInView={{ opacity: 1, y: 0, rotateX: 0, scale: 1 }}
           viewport={{ once: true, margin: "-40px" }}
           transition={{
             delay: i * 0.12,
@@ -112,12 +116,13 @@ function Countdown() {
           className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white px-6 py-6 text-center shadow-[0_8px_30px_-12px_rgba(139,92,246,0.25)] sm:px-8"
         >
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pink-500/60 to-transparent" />
-          <div className="relative h-12 overflow-hidden sm:h-14">
+          <div className="relative h-12 sm:h-14" style={{ perspective: 450 }}>
             <motion.span
               key={value ?? "placeholder"}
-              initial={{ y: 26, opacity: 0, filter: "blur(6px)" }}
-              animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
-              transition={{ type: "spring", damping: 18, stiffness: 220 }}
+              initial={reducedMotion ? false : { y: -10, rotateX: -85, opacity: 0 }}
+              animate={{ y: 0, rotateX: 0, opacity: 1 }}
+              transition={{ type: "spring", damping: 20, stiffness: 180 }}
+              style={{ transformOrigin: "50% 50% -16px", backfaceVisibility: "hidden" }}
               className="block bg-gradient-to-b from-zinc-900 to-zinc-500 bg-clip-text font-mono text-4xl font-black tabular-nums text-transparent sm:text-5xl"
             >
               {value === null ? "--" : String(value).padStart(2, "0")}
@@ -237,11 +242,9 @@ const socials = [
 function Marquee() {
   const items = Array.from({ length: 8 });
   return (
-    <div className="relative z-10 overflow-hidden border-y border-zinc-200/70 bg-zinc-50/80 py-5">
-      <motion.div
-        animate={{ x: ["0%", "-50%"] }}
-        transition={{ duration: 22, repeat: Infinity, ease: "linear" }}
-        className="flex w-max whitespace-nowrap"
+    <div data-ambient-section className="relative z-10 overflow-hidden border-y border-zinc-200/70 bg-zinc-50/80 py-5">
+      <div
+        className="ambient-loop marquee-track flex w-max whitespace-nowrap"
       >
         {[0, 1].map((copy) => (
           <div key={copy} className="flex shrink-0">
@@ -260,7 +263,7 @@ function Marquee() {
             ))}
           </div>
         ))}
-      </motion.div>
+      </div>
       {/* edge fades */}
       <div className="pointer-events-none absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#fbfaff] to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#fbfaff] to-transparent" />
@@ -378,14 +381,14 @@ function FeatureCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 70, rotateX: 18, scale: 0.92 }}
-      whileInView={{ opacity: 1, y: 0, rotateX: 0, scale: 1 }}
+      initial={{ opacity: 0, x: (index - 1) * 35, y: 85, rotateX: 30, rotateY: (1 - index) * 12, scale: 0.9 }}
+      whileInView={{ opacity: 1, x: 0, y: 0, rotateX: 0, rotateY: 0, scale: 1 }}
       viewport={{ once: true, margin: "-60px" }}
       transition={{
-        delay: index * 0.15,
+        delay: index * 0.18,
         type: "spring",
-        damping: 18,
-        stiffness: 90,
+        damping: 22,
+        stiffness: 95,
       }}
       style={{ perspective: 900 }}
     >
@@ -397,10 +400,8 @@ function FeatureCard({
         className="group relative h-full overflow-hidden rounded-2xl p-px"
       >
         {/* Spinning conic gradient border */}
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-          className="absolute left-1/2 top-1/2 aspect-square w-[220%] -translate-x-1/2 -translate-y-1/2 opacity-25 transition-opacity duration-500 [background:conic-gradient(from_0deg,transparent_0%,#8b5cf6_12%,#ec4899_25%,#f97316_38%,transparent_50%)] group-hover:opacity-90"
+        <div
+          className="ambient-loop feature-border absolute left-1/2 top-1/2 aspect-square w-[220%] -translate-x-1/2 -translate-y-1/2 opacity-25 transition-opacity duration-500 [background:conic-gradient(from_0deg,transparent_0%,#8b5cf6_12%,#ec4899_25%,#f97316_38%,transparent_50%)] group-hover:opacity-90"
         />
 
         {/* Card body */}
@@ -416,18 +417,12 @@ function FeatureCard({
           />
 
           <div style={{ transform: "translateZ(40px)" }}>
-            <motion.div
-              animate={{ y: [0, -6, 0] }}
-              transition={{
-                duration: 3.5,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: index * 0.5,
-              }}
-              className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white shadow-sm ${feature.iconColor} transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[6deg]`}
+            <div
+              style={{ animationDelay: `${index * 0.5}s` }}
+              className={`ambient-loop feature-icon mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white shadow-sm ${feature.iconColor} transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[6deg]`}
             >
               {feature.icon}
-            </motion.div>
+            </div>
             <h3 className="mb-2.5 font-display text-xl font-semibold tracking-tight">
               {feature.title}
             </h3>
@@ -444,29 +439,43 @@ function FeatureCard({
   );
 }
 
-const LENS_SIZE = 420;
-
 export default function ComingSoon() {
+  return (
+    <MotionConfig reducedMotion="user">
+      <ComingSoonContent />
+    </MotionConfig>
+  );
+}
+
+function ComingSoonContent() {
+  const reducedMotion = useReducedMotion();
+  const pageRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const peekRef = useRef<HTMLDivElement>(null);
 
-  // The page is blurred everywhere except a soft clear window at the pointer.
-  const [lensVisible, setLensVisible] = useState(false);
-  const lensX = useMotionValue(-LENS_SIZE);
-  const lensY = useMotionValue(-LENS_SIZE);
-  const lensXSmooth = useSpring(lensX, { damping: 26, stiffness: 260 });
-  const lensYSmooth = useSpring(lensY, { damping: 26, stiffness: 260 });
-  const lensMask = useMotionTemplate`radial-gradient(circle ${LENS_SIZE / 2}px at ${lensXSmooth}px ${lensYSmooth}px, transparent 0%, transparent 65%, rgba(0,0,0,0.45) 82%, black 100%)`;
-
-  function moveLens(e: React.PointerEvent<HTMLElement>) {
-    lensX.set(e.clientX);
-    lensY.set(e.clientY);
-    if (!lensVisible) {
-      lensXSmooth.jump(e.clientX);
-      lensYSmooth.jump(e.clientY);
-    }
-    setLensVisible(true);
-  }
+  // One observer pauses decorative CSS loops without re-rendering the page on scroll.
+  useEffect(() => {
+    const sections = pageRef.current?.querySelectorAll<HTMLElement>("[data-ambient-section]");
+    if (!sections) return;
+    const visibleSections = new Map<HTMLElement, boolean>();
+    const updatePlayback = () => {
+      visibleSections.forEach((visible, section) => {
+        section.dataset.ambientActive = String(visible && !document.hidden);
+      });
+    };
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        visibleSections.set(entry.target as HTMLElement, entry.isIntersecting);
+      });
+      updatePlayback();
+    }, { rootMargin: "100px" });
+    sections.forEach((section) => observer.observe(section));
+    document.addEventListener("visibilitychange", updatePlayback);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", updatePlayback);
+    };
+  }, []);
 
   // Page-wide scroll progress bar
   const { scrollYProgress: pageProgress } = useScroll();
@@ -485,57 +494,47 @@ export default function ComingSoon() {
   const bgScale = useTransform(heroProgress, [0, 1], [0.82, 0.9]);
   const bgY = useTransform(heroProgress, [0, 1], ["0%", "10%"]);
 
-  // Sneak peek: card tilts up from 3D beneath the page-wide blur.
+  // Sneak peek: card tilts up from 3D.
   const { scrollYProgress: peekProgress } = useScroll({
     target: peekRef,
     offset: ["start end", "center center"],
   });
   const smoothPeek = useSpring(peekProgress, { damping: 20, stiffness: 90 });
-  const peekRotateX = useTransform(smoothPeek, [0, 1], [35, 0]);
-  const peekScale = useTransform(smoothPeek, [0, 1], [0.85, 1]);
+  const peekRotateX = useTransform(smoothPeek, [0, 1], [52, 0]);
+  const peekRotateY = useTransform(smoothPeek, [0, 1], [-8, 0]);
+  const peekY = useTransform(smoothPeek, [0, 1], [75, 0]);
+  const peekScale = useTransform(smoothPeek, [0, 1], [0.78, 1]);
   const peekOpacity = useTransform(smoothPeek, [0, 0.4], [0, 1]);
 
   return (
-    <div
-      onPointerMove={moveLens}
-      onPointerDown={moveLens}
-      onPointerLeave={() => setLensVisible(false)}
-      onPointerCancel={() => setLensVisible(false)}
-      className="relative w-full overflow-x-clip bg-[#fbfaff] text-zinc-900"
-    >
+    <div ref={pageRef} className="relative w-full overflow-x-clip bg-[#fbfaff] text-zinc-900">
       {/* Scroll progress bar */}
       <motion.div
         style={{ scaleX: progressScale }}
         className="fixed inset-x-0 top-0 z-50 h-1 origin-left bg-gradient-to-r from-violet-500 via-pink-500 to-orange-500"
       />
 
-      {/* A clear hole in the blur reveals the original page without changing colors. */}
-      <motion.div
-        aria-hidden="true"
-        style={{
-          maskImage: lensVisible ? lensMask : "none",
-          WebkitMaskImage: lensVisible ? lensMask : "none",
-        }}
-        className="pointer-events-none fixed inset-0 z-40 backdrop-blur-[8px]"
-      />
-
       {/* ============ HERO ============ */}
       <section
         ref={heroRef}
-        className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden"
+        data-ambient-section
+        className="launch-hero relative flex min-h-screen flex-col items-center justify-center overflow-hidden"
       >
-        {/* Keep the original background blur even inside the clear cursor window. */}
+        {/* Fixed blur on the hero background image. */}
         <motion.div
-          style={{ scale: bgScale, y: bgY }}
-          className="absolute inset-0"
+          style={{ scale: reducedMotion ? 0.82 : bgScale, y: reducedMotion ? 0 : bgY }}
+          className="scroll-image-layer absolute inset-0"
         >
+          <div className="launch-backdrop absolute inset-0">
           <Image
             src="/website.png"
             alt=""
             fill
             priority
-            className="object-cover blur-[12px] brightness-[1.02] saturate-[1.15]"
+            sizes="100vw"
+            className="transform-gpu object-cover blur-[12px] brightness-[1.02] saturate-[1.15]"
           />
+          </div>
         </motion.div>
 
         {/* Overlays: soft white tint + vignette */}
@@ -544,31 +543,36 @@ export default function ComingSoon() {
 
         {/* Hero content */}
         <motion.div
-          style={{ y: heroTextY, opacity: heroTextOpacity }}
+          style={{ y: reducedMotion ? 0 : heroTextY, opacity: reducedMotion ? 1 : heroTextOpacity }}
           className="relative z-10 flex flex-col items-center gap-8 px-6 text-center"
         >
           <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.7, ease: "easeOut" }}
+            initial={{ opacity: 0, y: -24, rotateX: 65, scale: 0.88 }}
+            animate={{ opacity: 1, y: 0, rotateX: 0, scale: 1 }}
+            transition={{ duration: 0.85, delay: 1.3, ease: [0.16, 1, 0.3, 1] }}
+            style={{ transformPerspective: 800 }}
             className="flex items-center gap-2 rounded-full border border-zinc-200 bg-white/70 px-5 py-2 shadow-sm backdrop-blur-md"
           >
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             </span>
-            <span className="bg-gradient-to-r from-violet-500 via-pink-500 to-orange-500 bg-clip-text text-sm font-bold tracking-[0.25em] text-transparent">
-              GEMINI JOBS
-            </span>
+            <Image
+              src="/logo-cropped.png"
+              alt="Gemini Jobs"
+              width={566}
+              height={80}
+              loading="eager"
+              className="h-5 w-auto object-contain"
+            />
           </motion.div>
 
           <AnimatedTitle text="COMING SOON" />
 
           <motion.p
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
-            transition={{ delay: 1.4 }}
+            initial={{ opacity: 0, y: 24, clipPath: "inset(100% 0 0 0)" }}
+            animate={{ opacity: 1, y: 0, clipPath: "inset(0% 0 0 0)" }}
+            transition={{ delay: 1.8, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
             className="max-w-xl text-lg leading-relaxed text-zinc-600 sm:text-xl"
           >
             Your next career move starts here. AI-powered, human-supported —
@@ -578,8 +582,8 @@ export default function ComingSoon() {
           <motion.div
             initial={{ opacity: 0, scaleX: 0 }}
             animate={{ opacity: 1, scaleX: 1 }}
-            transition={{ delay: 1.7, duration: 0.9, ease: "easeOut" }}
-            className="h-px w-48 bg-gradient-to-r from-transparent via-pink-500/70 to-transparent"
+            transition={{ delay: 2, duration: 0.9, ease: "easeOut" }}
+            className="launch-accent h-px w-48 bg-gradient-to-r from-transparent via-pink-500/70 to-transparent"
           />
         </motion.div>
 
@@ -587,23 +591,19 @@ export default function ComingSoon() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 2.2 }}
+          transition={{ delay: 2.6 }}
           className="absolute bottom-10 z-10 flex flex-col items-center gap-3"
         >
           <span className="text-[11px] font-medium uppercase tracking-[0.3em] text-zinc-400">
             Scroll
           </span>
-          <motion.div
-            animate={{ y: [0, 10, 0] }}
-            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-            className="flex h-10 w-6 items-start justify-center rounded-full border border-zinc-300 p-1.5"
+          <div
+            className="ambient-loop scroll-cue flex h-10 w-6 items-start justify-center rounded-full border border-zinc-300 p-1.5"
           >
-            <motion.div
-              animate={{ opacity: [1, 0.2, 1] }}
-              transition={{ duration: 1.6, repeat: Infinity }}
-              className="h-2 w-1 rounded-full bg-gradient-to-b from-pink-400 to-orange-400"
+            <div
+              className="ambient-loop scroll-cue-dot h-2 w-1 rounded-full bg-gradient-to-b from-pink-400 to-orange-400"
             />
-          </motion.div>
+          </div>
         </motion.div>
       </section>
 
@@ -613,6 +613,7 @@ export default function ComingSoon() {
       {/* ============ SNEAK PEEK (still under wraps) ============ */}
       <section
         ref={peekRef}
+        data-ambient-section
         className="relative z-10 flex flex-col items-center px-6 py-32"
       >
         <motion.div
@@ -635,22 +636,19 @@ export default function ComingSoon() {
 
         <div style={{ perspective: 1200 }} className="w-full max-w-5xl">
           <motion.div
+            className="scroll-image-layer"
             style={{
-              rotateX: peekRotateX,
-              scale: peekScale,
-              opacity: peekOpacity,
+              rotateX: reducedMotion ? 0 : peekRotateX,
+              rotateY: reducedMotion ? 0 : peekRotateY,
+              y: reducedMotion ? 0 : peekY,
+              scale: reducedMotion ? 1 : peekScale,
+              opacity: reducedMotion ? 1 : peekOpacity,
               transformStyle: "preserve-3d",
             }}
           >
             {/* gentle continuous float */}
-            <motion.div
-              animate={{ y: [0, -12, 0] }}
-              transition={{
-                duration: 6,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_40px_120px_-20px_rgba(168,85,247,0.3)]"
+            <div
+              className="ambient-loop preview-float relative overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_40px_120px_-20px_rgba(168,85,247,0.3)]"
             >
               {/* Browser chrome bar */}
               <div className="flex items-center gap-2 border-b border-zinc-200 bg-zinc-100 px-4 py-3">
@@ -662,26 +660,20 @@ export default function ComingSoon() {
                 </div>
               </div>
 
-              {/* The page overlay blurs this preview outside the cursor window. */}
+              {/* Keep the preview blurred beneath the clear lock badge. */}
               <div className="relative">
                 <Image
                   src="/website.png"
-                  alt="Gemini Jobs website preview"
+                  alt="Gemini Jobs website preview (blurred)"
                   width={2048}
                   height={1142}
-                  className="w-full scale-105"
+                  sizes="(min-width: 1072px) 1024px, calc(100vw - 48px)"
+                  className="w-full scale-105 transform-gpu blur-lg"
                 />
 
                 {/* Light sweep across the card */}
-                <motion.div
-                  animate={{ x: ["-120%", "220%"] }}
-                  transition={{
-                    duration: 3.2,
-                    repeat: Infinity,
-                    repeatDelay: 1.8,
-                    ease: "easeInOut",
-                  }}
-                  className="pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/50 to-transparent"
+                <div
+                  className="ambient-loop preview-sweep pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/50 to-transparent"
                 />
 
                 {/* Frosted lock badge in the centre */}
@@ -693,17 +685,11 @@ export default function ComingSoon() {
                     transition={{ delay: 0.4, duration: 0.6, ease: "easeOut" }}
                     className="flex flex-col items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white/70 px-10 py-8 text-center shadow-lg backdrop-blur-xl"
                   >
-                    <motion.span
-                      animate={{ rotate: [0, -8, 8, -8, 0] }}
-                      transition={{
-                        duration: 0.7,
-                        repeat: Infinity,
-                        repeatDelay: 2.5,
-                      }}
-                      className="text-4xl"
+                    <span
+                      className="ambient-loop preview-lock text-4xl"
                     >
                       🔒
-                    </motion.span>
+                    </span>
                     <p className="font-display text-lg font-semibold">
                       Unlocking soon
                     </p>
@@ -713,13 +699,13 @@ export default function ComingSoon() {
                   </motion.div>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </motion.div>
         </div>
       </section>
 
       {/* ============ FEATURES ============ */}
-      <section className="relative z-10 mx-auto max-w-6xl px-6 py-24">
+      <section data-ambient-section className="relative z-10 mx-auto max-w-6xl px-6 py-24">
         <motion.div
           variants={fadeUp}
           initial="hidden"
@@ -737,7 +723,7 @@ export default function ComingSoon() {
             </span>
           </h2>
         </motion.div>
-        <div className="grid gap-6 sm:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-3" style={{ perspective: 1200 }}>
           {features.map((f, i) => (
             <FeatureCard key={f.title} feature={f} index={i} />
           ))}
@@ -745,7 +731,7 @@ export default function ComingSoon() {
       </section>
 
       {/* ============ CTA / FOOTER ============ */}
-      <section className="relative z-10 overflow-hidden px-6 py-32">
+      <section data-ambient-section className="relative z-10 overflow-hidden px-6 py-32">
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-[500px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-violet-600/15 via-pink-500/15 to-orange-500/15 blur-[120px]" />
         <motion.div
           variants={fadeUp}
