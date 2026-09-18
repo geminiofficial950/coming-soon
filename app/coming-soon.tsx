@@ -45,10 +45,12 @@ function AnimatedTitle({ text }: { text: string }) {
         <span
           key={wi}
           className="launch-word relative inline-block"
-          style={{
-            "--word-delay": `${0.65 + wi * 0.15}s`,
-            "--echo-delay": `${5 + wi * 0.15}s`,
-          } as CSSProperties}
+          style={
+            {
+              "--word-delay": `${0.65 + wi * 0.15}s`,
+              "--echo-delay": `${5 + wi * 0.15}s`,
+            } as CSSProperties
+          }
           aria-hidden="true"
         >
           <span className="invisible">{word}</span>
@@ -64,7 +66,7 @@ function AnimatedTitle({ text }: { text: string }) {
 }
 
 // Adjust the launch date here
-const LAUNCH_DATE = new Date("2026-11-01T00:00:00+11:00");
+const LAUNCH_DATE = new Date("2026-10-01T00:00:00+11:00");
 
 function getTimeLeft() {
   const diff = Math.max(0, LAUNCH_DATE.getTime() - Date.now());
@@ -100,7 +102,11 @@ function Countdown() {
       );
 
   return (
-    <div ref={countdownRef} className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-5" style={{ perspective: 1000 }}>
+    <div
+      ref={countdownRef}
+      className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-5"
+      style={{ perspective: 1000 }}
+    >
       {entries.map(([label, value], i) => (
         <motion.div
           key={label}
@@ -119,10 +125,15 @@ function Countdown() {
           <div className="relative h-12 sm:h-14" style={{ perspective: 450 }}>
             <motion.span
               key={value ?? "placeholder"}
-              initial={reducedMotion ? false : { y: -10, rotateX: -85, opacity: 0 }}
+              initial={
+                reducedMotion ? false : { y: -10, rotateX: -85, opacity: 0 }
+              }
               animate={{ y: 0, rotateX: 0, opacity: 1 }}
               transition={{ type: "spring", damping: 20, stiffness: 180 }}
-              style={{ transformOrigin: "50% 50% -16px", backfaceVisibility: "hidden" }}
+              style={{
+                transformOrigin: "50% 50% -16px",
+                backfaceVisibility: "hidden",
+              }}
               className="block bg-gradient-to-b from-zinc-900 to-zinc-500 bg-clip-text font-mono text-4xl font-black tabular-nums text-transparent sm:text-5xl"
             >
               {value === null ? "--" : String(value).padStart(2, "0")}
@@ -139,6 +150,8 @@ function Countdown() {
 
 function NotifyForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (submitted) {
     return (
@@ -170,32 +183,70 @@ function NotifyForm() {
   }
 
   return (
-    <motion.form
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-40px" }}
-      transition={{ duration: 0.7, ease: "easeOut" }}
-      className="flex w-full max-w-md flex-col gap-3 sm:flex-row"
-      onSubmit={(e) => {
-        e.preventDefault();
-        setSubmitted(true);
-      }}
-    >
-      <input
-        type="email"
-        required
-        placeholder="you@example.com"
-        className="flex-1 rounded-full border border-zinc-200 bg-white px-6 py-3.5 text-sm text-zinc-900 placeholder-zinc-400 shadow-sm outline-none transition-all focus:border-pink-400 focus:ring-4 focus:ring-pink-100"
-      />
-      <motion.button
-        whileHover={{ scale: 1.04 }}
-        whileTap={{ scale: 0.96 }}
-        type="submit"
-        className="animate-glow-pulse rounded-full bg-gradient-to-r from-violet-500 via-pink-500 to-orange-500 px-8 py-3.5 text-sm font-semibold text-white"
+    <div className="flex w-full max-w-md flex-col items-center gap-2">
+      <motion.form
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-40px" }}
+        transition={{ duration: 0.7, ease: "easeOut" }}
+        className="flex w-full flex-col gap-3 sm:flex-row"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setError(null);
+          setLoading(true);
+
+          const form = e.currentTarget;
+          const email = new FormData(form).get("email");
+
+          try {
+            const res = await fetch("/api/notify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email }),
+            });
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+              setError(
+                typeof data.error === "string"
+                  ? data.error
+                  : "Something went wrong. Please try again."
+              );
+              return;
+            }
+
+            setSubmitted(true);
+          } catch {
+            setError("Network error. Please try again.");
+          } finally {
+            setLoading(false);
+          }
+        }}
       >
-        Notify Me
-      </motion.button>
-    </motion.form>
+        <input
+          type="email"
+          name="email"
+          required
+          disabled={loading}
+          placeholder="you@example.com"
+          className="flex-1 rounded-full border border-zinc-200 bg-white px-6 py-3.5 text-sm text-zinc-900 placeholder-zinc-400 shadow-sm outline-none transition-all focus:border-pink-400 focus:ring-4 focus:ring-pink-100 disabled:opacity-60"
+        />
+        <motion.button
+          whileHover={loading ? undefined : { scale: 1.04 }}
+          whileTap={loading ? undefined : { scale: 0.96 }}
+          type="submit"
+          disabled={loading}
+          className="animate-glow-pulse rounded-full bg-gradient-to-r from-violet-500 via-pink-500 to-orange-500 px-8 py-3.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {loading ? "Saving..." : "Notify Me"}
+        </motion.button>
+      </motion.form>
+      {error ? (
+        <p className="text-sm text-red-500" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -242,10 +293,11 @@ const socials = [
 function Marquee() {
   const items = Array.from({ length: 8 });
   return (
-    <div data-ambient-section className="relative z-10 overflow-hidden border-y border-zinc-200/70 bg-zinc-50/80 py-5">
-      <div
-        className="ambient-loop marquee-track flex w-max whitespace-nowrap"
-      >
+    <div
+      data-ambient-section
+      className="relative z-10 overflow-hidden border-y border-zinc-200/70 bg-zinc-50/80 py-5"
+    >
+      <div className="ambient-loop marquee-track flex w-max whitespace-nowrap">
         {[0, 1].map((copy) => (
           <div key={copy} className="flex shrink-0">
             {items.map((_, i) => (
@@ -381,7 +433,14 @@ function FeatureCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: (index - 1) * 35, y: 85, rotateX: 30, rotateY: (1 - index) * 12, scale: 0.9 }}
+      initial={{
+        opacity: 0,
+        x: (index - 1) * 35,
+        y: 85,
+        rotateX: 30,
+        rotateY: (1 - index) * 12,
+        scale: 0.9,
+      }}
       whileInView={{ opacity: 1, x: 0, y: 0, rotateX: 0, rotateY: 0, scale: 1 }}
       viewport={{ once: true, margin: "-60px" }}
       transition={{
@@ -400,9 +459,7 @@ function FeatureCard({
         className="group relative h-full overflow-hidden rounded-2xl p-px"
       >
         {/* Spinning conic gradient border */}
-        <div
-          className="ambient-loop feature-border absolute left-1/2 top-1/2 aspect-square w-[220%] -translate-x-1/2 -translate-y-1/2 opacity-25 transition-opacity duration-500 [background:conic-gradient(from_0deg,transparent_0%,#8b5cf6_12%,#ec4899_25%,#f97316_38%,transparent_50%)] group-hover:opacity-90"
-        />
+        <div className="ambient-loop feature-border absolute left-1/2 top-1/2 aspect-square w-[220%] -translate-x-1/2 -translate-y-1/2 opacity-25 transition-opacity duration-500 [background:conic-gradient(from_0deg,transparent_0%,#8b5cf6_12%,#ec4899_25%,#f97316_38%,transparent_50%)] group-hover:opacity-90" />
 
         {/* Card body */}
         <div className="relative h-full rounded-2xl bg-white p-8 shadow-[0_10px_40px_-15px_rgba(139,92,246,0.2)]">
@@ -455,7 +512,9 @@ function ComingSoonContent() {
 
   // One observer pauses decorative CSS loops without re-rendering the page on scroll.
   useEffect(() => {
-    const sections = pageRef.current?.querySelectorAll<HTMLElement>("[data-ambient-section]");
+    const sections = pageRef.current?.querySelectorAll<HTMLElement>(
+      "[data-ambient-section]",
+    );
     if (!sections) return;
     const visibleSections = new Map<HTMLElement, boolean>();
     const updatePlayback = () => {
@@ -463,12 +522,18 @@ function ComingSoonContent() {
         section.dataset.ambientActive = String(visible && !document.hidden);
       });
     };
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        visibleSections.set(entry.target as HTMLElement, entry.isIntersecting);
-      });
-      updatePlayback();
-    }, { rootMargin: "100px" });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          visibleSections.set(
+            entry.target as HTMLElement,
+            entry.isIntersecting,
+          );
+        });
+        updatePlayback();
+      },
+      { rootMargin: "100px" },
+    );
     sections.forEach((section) => observer.observe(section));
     document.addEventListener("visibilitychange", updatePlayback);
     return () => {
@@ -507,7 +572,10 @@ function ComingSoonContent() {
   const peekOpacity = useTransform(smoothPeek, [0, 0.4], [0, 1]);
 
   return (
-    <div ref={pageRef} className="relative w-full overflow-x-clip bg-[#fbfaff] text-zinc-900">
+    <div
+      ref={pageRef}
+      className="relative w-full overflow-x-clip bg-[#fbfaff] text-zinc-900"
+    >
       {/* Scroll progress bar */}
       <motion.div
         style={{ scaleX: progressScale }}
@@ -522,18 +590,21 @@ function ComingSoonContent() {
       >
         {/* Fixed blur on the hero background image. */}
         <motion.div
-          style={{ scale: reducedMotion ? 0.82 : bgScale, y: reducedMotion ? 0 : bgY }}
+          style={{
+            scale: reducedMotion ? 0.82 : bgScale,
+            y: reducedMotion ? 0 : bgY,
+          }}
           className="scroll-image-layer absolute inset-0"
         >
           <div className="launch-backdrop absolute inset-0">
-          <Image
-            src="/website.png"
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="transform-gpu object-cover blur-[12px] brightness-[1.02] saturate-[1.15]"
-          />
+            <Image
+              src="/website.png"
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              className="transform-gpu object-cover blur-[12px] brightness-[1.02] saturate-[1.15]"
+            />
           </div>
         </motion.div>
 
@@ -543,8 +614,11 @@ function ComingSoonContent() {
 
         {/* Hero content */}
         <motion.div
-          style={{ y: reducedMotion ? 0 : heroTextY, opacity: reducedMotion ? 1 : heroTextOpacity }}
-          className="relative z-10 flex flex-col items-center gap-8 px-6 text-center"
+          style={{
+            y: reducedMotion ? 0 : heroTextY,
+            opacity: reducedMotion ? 1 : heroTextOpacity,
+          }}
+          className="relative z-10 flex flex-col items-center gap-6 px-6 text-center"
         >
           <motion.div
             initial={{ opacity: 0, y: -24, rotateX: 65, scale: 0.88 }}
@@ -573,7 +647,7 @@ function ComingSoonContent() {
             initial={{ opacity: 0, y: 24, clipPath: "inset(100% 0 0 0)" }}
             animate={{ opacity: 1, y: 0, clipPath: "inset(0% 0 0 0)" }}
             transition={{ delay: 1.8, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-            className="max-w-xl text-lg leading-relaxed text-zinc-600 sm:text-xl"
+            className="max-w-xl text-lg font-medium leading-relaxed text-zinc-900 sm:text-xl [text-shadow:0_1px_12px_rgba(255,255,255,0.9),0_0_24px_rgba(255,255,255,0.7)]"
           >
             Your next career move starts here. AI-powered, human-supported —
             built for Australia.
@@ -597,12 +671,8 @@ function ComingSoonContent() {
           <span className="text-[11px] font-medium uppercase tracking-[0.3em] text-zinc-400">
             Scroll
           </span>
-          <div
-            className="ambient-loop scroll-cue flex h-10 w-6 items-start justify-center rounded-full border border-zinc-300 p-1.5"
-          >
-            <div
-              className="ambient-loop scroll-cue-dot h-2 w-1 rounded-full bg-gradient-to-b from-pink-400 to-orange-400"
-            />
+          <div className="ambient-loop scroll-cue flex h-10 w-6 items-start justify-center rounded-full border border-zinc-300 p-1.5">
+            <div className="ambient-loop scroll-cue-dot h-2 w-1 rounded-full bg-gradient-to-b from-pink-400 to-orange-400" />
           </div>
         </motion.div>
       </section>
@@ -614,14 +684,14 @@ function ComingSoonContent() {
       <section
         ref={peekRef}
         data-ambient-section
-        className="relative z-10 flex flex-col items-center px-6 py-32"
+        className="relative z-10 flex flex-col items-center px-6 py-16"
       >
         <motion.div
           variants={fadeUp}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="mb-16 text-center"
+          className="mb-8 text-center"
         >
           <p className="mb-3 text-sm font-bold uppercase tracking-[0.3em] text-pink-500">
             Sneak Peek
@@ -647,9 +717,7 @@ function ComingSoonContent() {
             }}
           >
             {/* gentle continuous float */}
-            <div
-              className="ambient-loop preview-float relative overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_40px_120px_-20px_rgba(168,85,247,0.3)]"
-            >
+            <div className="ambient-loop preview-float relative overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_40px_120px_-20px_rgba(168,85,247,0.3)]">
               {/* Browser chrome bar */}
               <div className="flex items-center gap-2 border-b border-zinc-200 bg-zinc-100 px-4 py-3">
                 <span className="h-3 w-3 rounded-full bg-red-400" />
@@ -672,9 +740,7 @@ function ComingSoonContent() {
                 />
 
                 {/* Light sweep across the card */}
-                <div
-                  className="ambient-loop preview-sweep pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/50 to-transparent"
-                />
+                <div className="ambient-loop preview-sweep pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/50 to-transparent" />
 
                 {/* Frosted lock badge in the centre */}
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -685,9 +751,7 @@ function ComingSoonContent() {
                     transition={{ delay: 0.4, duration: 0.6, ease: "easeOut" }}
                     className="flex flex-col items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white/70 px-10 py-8 text-center shadow-lg backdrop-blur-xl"
                   >
-                    <span
-                      className="ambient-loop preview-lock text-4xl"
-                    >
+                    <span className="ambient-loop preview-lock text-4xl">
                       🔒
                     </span>
                     <p className="font-display text-lg font-semibold">
@@ -704,14 +768,47 @@ function ComingSoonContent() {
         </div>
       </section>
 
-      {/* ============ FEATURES ============ */}
-      <section data-ambient-section className="relative z-10 mx-auto max-w-6xl px-6 py-24">
+      {/* ============ NOTIFY ============ */}
+      <section
+        data-ambient-section
+        className="relative z-10 flex flex-col items-center px-6 py-12"
+      >
         <motion.div
           variants={fadeUp}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="mb-14 text-center"
+          className="flex w-full max-w-md flex-col items-center gap-3 text-center"
+        >
+          <div>
+            <p className="mb-2 text-sm font-bold uppercase tracking-[0.3em] text-pink-500">
+              Stay in the loop
+            </p>
+            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+              Get notified when we{" "}
+              <span className="bg-gradient-to-r from-violet-500 via-pink-500 to-orange-500 bg-clip-text text-transparent">
+                launch
+              </span>
+            </h2>
+          </div>
+          <p className="text-sm text-zinc-500">
+            Drop your email — we&apos;ll ping you the moment Gemini Jobs goes live.
+          </p>
+          <NotifyForm />
+        </motion.div>
+      </section>
+
+      {/* ============ FEATURES ============ */}
+      <section
+        data-ambient-section
+        className="relative z-10 mx-auto max-w-6xl px-6 py-16"
+      >
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-80px" }}
+          className="mb-8 text-center"
         >
           <p className="mb-3 text-sm font-bold uppercase tracking-[0.3em] text-violet-500">
             Why Gemini Jobs
@@ -723,7 +820,10 @@ function ComingSoonContent() {
             </span>
           </h2>
         </motion.div>
-        <div className="grid gap-6 sm:grid-cols-3" style={{ perspective: 1200 }}>
+        <div
+          className="grid gap-6 sm:grid-cols-3"
+          style={{ perspective: 1200 }}
+        >
           {features.map((f, i) => (
             <FeatureCard key={f.title} feature={f} index={i} />
           ))}
@@ -731,14 +831,17 @@ function ComingSoonContent() {
       </section>
 
       {/* ============ CTA / FOOTER ============ */}
-      <section data-ambient-section className="relative z-10 overflow-hidden px-6 py-32">
+      <section
+        data-ambient-section
+        className="relative z-10 flex min-h-[85vh] flex-col overflow-hidden px-6 py-12"
+      >
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-[500px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-violet-600/15 via-pink-500/15 to-orange-500/15 blur-[120px]" />
         <motion.div
           variants={fadeUp}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="relative mx-auto flex max-w-2xl flex-col items-center gap-10 text-center"
+          className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-6 text-center"
         >
           <div>
             <p className="mb-3 text-sm font-bold uppercase tracking-[0.3em] text-orange-500">
@@ -753,13 +856,6 @@ function ComingSoonContent() {
           </div>
 
           <Countdown />
-
-          <div className="flex w-full flex-col items-center gap-3">
-            <p className="text-sm text-zinc-500">
-              Get notified the moment we go live
-            </p>
-            <NotifyForm />
-          </div>
 
           <div className="flex flex-col items-center gap-4">
             <p className="text-sm text-zinc-400">Follow the journey</p>
@@ -791,7 +887,7 @@ function ComingSoonContent() {
           </div>
         </motion.div>
 
-        <div className="relative mt-28 flex flex-col items-center gap-5 border-t border-zinc-200/70 pt-10 text-center">
+        <div className="relative mt-auto flex flex-col items-center gap-3 border-t border-zinc-200/70 pb-8 pt-6 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
