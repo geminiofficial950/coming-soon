@@ -45,7 +45,7 @@ function AnimatedTitle({ text }: { text: string }) {
       variants={letterContainer}
       initial="hidden"
       animate="visible"
-      className="flex flex-col items-center gap-1 text-7xl font-black tracking-tight sm:flex-row sm:gap-[0.35em] sm:text-8xl lg:text-9xl"
+      className="flex flex-col items-center gap-1 font-display text-7xl font-bold tracking-tight sm:flex-row sm:gap-[0.35em] sm:text-8xl lg:text-9xl"
       style={{ perspective: 800 }}
       aria-label={text}
     >
@@ -81,9 +81,7 @@ function getTimeLeft() {
 
 function Countdown() {
   // null until mounted so the server and first client render match
-  const [time, setTime] = useState<ReturnType<typeof getTimeLeft> | null>(
-    null
-  );
+  const [time, setTime] = useState<ReturnType<typeof getTimeLeft> | null>(null);
 
   useEffect(() => {
     setTime(getTimeLeft());
@@ -94,7 +92,7 @@ function Countdown() {
   const entries = time
     ? Object.entries(time)
     : (["Days", "Hours", "Minutes", "Seconds"] as const).map(
-        (label) => [label, null] as const
+        (label) => [label, null] as const,
       );
 
   return (
@@ -131,6 +129,68 @@ function Countdown() {
         </motion.div>
       ))}
     </div>
+  );
+}
+
+function NotifyForm() {
+  const [submitted, setSubmitted] = useState(false);
+
+  if (submitted) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.85 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: "spring", damping: 14, stiffness: 160 }}
+        className="flex items-center gap-3 rounded-full border border-emerald-200 bg-emerald-50 px-8 py-3.5 text-sm font-medium text-emerald-700"
+      >
+        <motion.span
+          initial={{ scale: 0, rotate: -90 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ delay: 0.15, type: "spring", damping: 12 }}
+          className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white"
+        >
+          <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+            <path
+              d="M5 13l4 4L19 7"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </motion.span>
+        You&apos;re on the list — we&apos;ll ping you at launch!
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.form
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-40px" }}
+      transition={{ duration: 0.7, ease: "easeOut" }}
+      className="flex w-full max-w-md flex-col gap-3 sm:flex-row"
+      onSubmit={(e) => {
+        e.preventDefault();
+        setSubmitted(true);
+      }}
+    >
+      <input
+        type="email"
+        required
+        placeholder="you@example.com"
+        className="flex-1 rounded-full border border-zinc-200 bg-white px-6 py-3.5 text-sm text-zinc-900 placeholder-zinc-400 shadow-sm outline-none transition-all focus:border-pink-400 focus:ring-4 focus:ring-pink-100"
+      />
+      <motion.button
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.96 }}
+        type="submit"
+        className="animate-glow-pulse rounded-full bg-gradient-to-r from-violet-500 via-pink-500 to-orange-500 px-8 py-3.5 text-sm font-semibold text-white"
+      >
+        Notify Me
+      </motion.button>
+    </motion.form>
   );
 }
 
@@ -261,7 +321,13 @@ const features = [
           strokeWidth="1.6"
           strokeLinejoin="round"
         />
-        <circle cx="12" cy="10.8" r="2.4" stroke="currentColor" strokeWidth="1.6" />
+        <circle
+          cx="12"
+          cy="10.8"
+          r="2.4"
+          stroke="currentColor"
+          strokeWidth="1.6"
+        />
       </svg>
     ),
     title: "Built for Australia",
@@ -295,7 +361,7 @@ function FeatureCard({
 
   const spotlight = useMotionTemplate`radial-gradient(260px circle at ${useTransform(
     mx,
-    (v) => v * 100
+    (v) => v * 100,
   )}% ${useTransform(my, (v) => v * 100)}%, rgba(236,72,153,0.08), transparent 70%)`;
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
@@ -362,7 +428,7 @@ function FeatureCard({
             >
               {feature.icon}
             </motion.div>
-            <h3 className="mb-2.5 text-xl font-semibold tracking-tight">
+            <h3 className="mb-2.5 font-display text-xl font-semibold tracking-tight">
               {feature.title}
             </h3>
             <p className="text-sm leading-relaxed text-zinc-500">
@@ -396,8 +462,8 @@ export default function ComingSoon() {
   });
   const heroTextY = useTransform(heroProgress, [0, 1], [0, -180]);
   const heroTextOpacity = useTransform(heroProgress, [0, 0.7], [1, 0]);
-  const bgScale = useTransform(heroProgress, [0, 1], [1.1, 1.25]);
-  const bgY = useTransform(heroProgress, [0, 1], ["0%", "12%"]);
+  const bgScale = useTransform(heroProgress, [0, 1], [0.82, 0.9]);
+  const bgY = useTransform(heroProgress, [0, 1], ["0%", "10%"]);
 
   // Sneak peek: card tilts up from 3D — screenshot itself stays blurred
   const { scrollYProgress: peekProgress } = useScroll({
@@ -420,7 +486,7 @@ export default function ComingSoon() {
       {/* ============ HERO ============ */}
       <section
         ref={heroRef}
-        className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden"
+        className="group/hero relative flex min-h-screen flex-col items-center justify-center overflow-hidden"
       >
         {/* Blurred website screenshot as background */}
         <motion.div
@@ -432,31 +498,31 @@ export default function ComingSoon() {
             alt=""
             fill
             priority
-            className="object-cover blur-[6px] brightness-[1.02] saturate-[1.15]"
+            className="object-cover blur-2xl brightness-[1.02] saturate-[1.15] transition-[filter] duration-700 ease-out group-hover/hero:blur-[12px]"
           />
         </motion.div>
 
-        {/* Overlays: soft white tint + vignette */}
-        <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/25 to-[#fbfaff]" />
-        <div className="pointer-events-none absolute inset-0 [background:radial-gradient(ellipse_at_center,transparent_55%,#fbfaff_100%)]" />
+        {/* Overlays: soft white tint + vignette (fade out on hover so image shows) */}
+        <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/25 to-[#fbfaff] transition-opacity duration-700 group-hover/hero:opacity-30" />
+        <div className="pointer-events-none absolute inset-0 [background:radial-gradient(ellipse_at_center,transparent_40%,#fbfaff_92%)]" />
 
         {/* Floating glow orbs */}
         <motion.div
           animate={{ y: [0, -30, 0], x: [0, 20, 0] }}
           transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-          className="pointer-events-none absolute left-[12%] top-[22%] h-72 w-72 rounded-full bg-purple-400/30 blur-[100px]"
+          className="pointer-events-none absolute left-[12%] top-[22%] h-72 w-72 rounded-full bg-purple-400/30 blur-[100px] transition-opacity duration-700 group-hover/hero:opacity-0"
         />
         <motion.div
           animate={{ y: [0, 35, 0], x: [0, -25, 0] }}
           transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
-          className="pointer-events-none absolute bottom-[18%] right-[10%] h-80 w-80 rounded-full bg-orange-400/25 blur-[110px]"
+          className="pointer-events-none absolute bottom-[18%] right-[10%] h-80 w-80 rounded-full bg-orange-400/25 blur-[110px] transition-opacity duration-700 group-hover/hero:opacity-0"
         />
 
         {/* Slowly rotating conic halo behind the title */}
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 24, repeat: Infinity, ease: "linear" }}
-          className="pointer-events-none absolute left-1/2 top-1/2 h-[620px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-20 blur-[90px] [background:conic-gradient(from_0deg,#8b5cf6,#ec4899,#f97316,#8b5cf6)]"
+          className="pointer-events-none absolute left-1/2 top-1/2 h-[620px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-20 blur-[90px] transition-opacity duration-700 group-hover/hero:opacity-0 [background:conic-gradient(from_0deg,#8b5cf6,#ec4899,#f97316,#8b5cf6)]"
         />
 
         {/* Hero content */}
@@ -542,7 +608,7 @@ export default function ComingSoon() {
           <p className="mb-3 text-sm font-bold uppercase tracking-[0.3em] text-pink-500">
             Sneak Peek
           </p>
-          <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">
+          <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
             Still under{" "}
             <span className="bg-gradient-to-r from-violet-500 via-pink-500 to-orange-500 bg-clip-text text-transparent">
               wraps
@@ -621,7 +687,9 @@ export default function ComingSoon() {
                     >
                       🔒
                     </motion.span>
-                    <p className="text-lg font-semibold">Unlocking soon</p>
+                    <p className="font-display text-lg font-semibold">
+                      Unlocking soon
+                    </p>
                     <p className="max-w-xs text-sm text-zinc-500">
                       The full experience is almost ready. Hang tight!
                     </p>
@@ -645,7 +713,7 @@ export default function ComingSoon() {
           <p className="mb-3 text-sm font-bold uppercase tracking-[0.3em] text-violet-500">
             Why Gemini Jobs
           </p>
-          <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">
+          <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
             Made to get you{" "}
             <span className="bg-gradient-to-r from-violet-500 via-pink-500 to-orange-500 bg-clip-text text-transparent">
               hired
@@ -673,7 +741,7 @@ export default function ComingSoon() {
             <p className="mb-3 text-sm font-bold uppercase tracking-[0.3em] text-orange-500">
               The wait is almost over
             </p>
-            <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">
+            <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
               Launching{" "}
               <span className="bg-gradient-to-r from-violet-500 via-pink-500 to-orange-500 bg-clip-text text-transparent">
                 in
@@ -682,6 +750,13 @@ export default function ComingSoon() {
           </div>
 
           <Countdown />
+
+          <div className="flex w-full flex-col items-center gap-3">
+            <p className="text-sm text-zinc-500">
+              Get notified the moment we go live
+            </p>
+            <NotifyForm />
+          </div>
 
           <div className="flex flex-col items-center gap-4">
             <p className="text-sm text-zinc-400">Follow the journey</p>
