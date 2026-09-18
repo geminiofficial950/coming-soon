@@ -444,22 +444,27 @@ function FeatureCard({
   );
 }
 
-const LENS_SIZE = 320;
+const LENS_SIZE = 420;
 
 export default function ComingSoon() {
   const heroRef = useRef<HTMLDivElement>(null);
   const peekRef = useRef<HTMLDivElement>(null);
 
-  // Frosted lens that follows the cursor / touch across the whole page
+  // The page is blurred everywhere except a soft clear window at the pointer.
   const [lensVisible, setLensVisible] = useState(false);
   const lensX = useMotionValue(-LENS_SIZE);
   const lensY = useMotionValue(-LENS_SIZE);
   const lensXSmooth = useSpring(lensX, { damping: 26, stiffness: 260 });
   const lensYSmooth = useSpring(lensY, { damping: 26, stiffness: 260 });
+  const lensMask = useMotionTemplate`radial-gradient(circle ${LENS_SIZE / 2}px at ${lensXSmooth}px ${lensYSmooth}px, transparent 0%, transparent 65%, rgba(0,0,0,0.45) 82%, black 100%)`;
 
   function moveLens(e: React.PointerEvent<HTMLElement>) {
-    lensX.set(e.clientX - LENS_SIZE / 2);
-    lensY.set(e.clientY - LENS_SIZE / 2);
+    lensX.set(e.clientX);
+    lensY.set(e.clientY);
+    if (!lensVisible) {
+      lensXSmooth.jump(e.clientX);
+      lensYSmooth.jump(e.clientY);
+    }
     setLensVisible(true);
   }
 
@@ -480,7 +485,7 @@ export default function ComingSoon() {
   const bgScale = useTransform(heroProgress, [0, 1], [0.82, 0.9]);
   const bgY = useTransform(heroProgress, [0, 1], ["0%", "10%"]);
 
-  // Sneak peek: card tilts up from 3D — screenshot itself stays blurred
+  // Sneak peek: card tilts up from 3D beneath the page-wide blur.
   const { scrollYProgress: peekProgress } = useScroll({
     target: peekRef,
     offset: ["start end", "center center"],
@@ -495,6 +500,7 @@ export default function ComingSoon() {
       onPointerMove={moveLens}
       onPointerDown={moveLens}
       onPointerLeave={() => setLensVisible(false)}
+      onPointerCancel={() => setLensVisible(false)}
       className="relative w-full overflow-x-clip bg-[#fbfaff] text-zinc-900"
     >
       {/* Scroll progress bar */}
@@ -503,28 +509,22 @@ export default function ComingSoon() {
         className="fixed inset-x-0 top-0 z-50 h-1 origin-left bg-gradient-to-r from-violet-500 via-pink-500 to-orange-500"
       />
 
-      {/* Soft cursor lens above every section, below the progress bar */}
+      {/* A clear hole in the blur reveals the original page without changing colors. */}
       <motion.div
         aria-hidden="true"
         style={{
-          x: lensXSmooth,
-          y: lensYSmooth,
-          width: LENS_SIZE,
-          height: LENS_SIZE,
+          maskImage: lensVisible ? lensMask : "none",
+          WebkitMaskImage: lensVisible ? lensMask : "none",
         }}
-        className={`pointer-events-none fixed left-0 top-0 z-40 rounded-full transition-opacity duration-300 ${
-          lensVisible ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        <div className="h-full w-full rounded-full bg-white/5 backdrop-blur-[6px] [mask-image:radial-gradient(circle,black_0%,rgba(0,0,0,0.65)_25%,rgba(0,0,0,0.2)_50%,transparent_72%)]" />
-      </motion.div>
+        className="pointer-events-none fixed inset-0 z-40 backdrop-blur-[8px]"
+      />
 
       {/* ============ HERO ============ */}
       <section
         ref={heroRef}
         className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden"
       >
-        {/* Blurred website screenshot as background */}
+        {/* Keep the original background blur even inside the clear cursor window. */}
         <motion.div
           style={{ scale: bgScale, y: bgY }}
           className="absolute inset-0"
@@ -662,14 +662,14 @@ export default function ComingSoon() {
                 </div>
               </div>
 
-              {/* Screenshot stays blurred — no spoilers */}
+              {/* The page overlay blurs this preview outside the cursor window. */}
               <div className="relative">
                 <Image
                   src="/website.png"
-                  alt="Gemini Jobs website preview (blurred)"
+                  alt="Gemini Jobs website preview"
                   width={2048}
                   height={1142}
-                  className="w-full scale-105 blur-lg"
+                  className="w-full scale-105"
                 />
 
                 {/* Light sweep across the card */}
