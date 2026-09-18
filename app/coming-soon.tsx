@@ -250,46 +250,6 @@ function NotifyForm() {
   );
 }
 
-const socials = [
-  {
-    label: "LinkedIn",
-    href: "https://linkedin.com",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-        <path d="M6.94 5a2 2 0 11-4-.002 2 2 0 014 .002zM7 8.48H3V21h4V8.48zm6.32 0H9.34V21h3.94v-6.57c0-3.66 4.77-4 4.77 0V21H22v-7.93c0-6.17-7.06-5.94-8.72-2.91l.04-1.68z" />
-      </svg>
-    ),
-  },
-  {
-    label: "Instagram",
-    href: "https://instagram.com",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-        <rect
-          x="3"
-          y="3"
-          width="18"
-          height="18"
-          rx="5"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        />
-        <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.8" />
-        <circle cx="17.2" cy="6.8" r="1.2" fill="currentColor" />
-      </svg>
-    ),
-  },
-  {
-    label: "X",
-    href: "https://x.com",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-        <path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.24l-4.89-6.4L6.47 22H3.34l7.24-8.28L2.8 2h6.4l4.42 5.85L18.9 2zm-1.1 18.1h1.73L7.28 3.8H5.42L17.8 20.1z" />
-      </svg>
-    ),
-  },
-];
-
 function Marquee() {
   const items = Array.from({ length: 8 });
   return (
@@ -833,7 +793,7 @@ function ComingSoonContent() {
       {/* ============ CTA / FOOTER ============ */}
       <section
         data-ambient-section
-        className="relative z-10 flex min-h-[85vh] flex-col overflow-hidden px-6 py-12"
+        className="relative z-10 flex flex-col overflow-hidden px-6 py-12"
       >
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-[500px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-violet-600/15 via-pink-500/15 to-orange-500/15 blur-[120px]" />
         <motion.div
@@ -841,7 +801,7 @@ function ComingSoonContent() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-6 text-center"
+          className="relative mx-auto flex w-full max-w-2xl flex-col items-center gap-5 text-center"
         >
           <div>
             <p className="mb-3 text-sm font-bold uppercase tracking-[0.3em] text-orange-500">
@@ -856,38 +816,9 @@ function ComingSoonContent() {
           </div>
 
           <Countdown />
-
-          <div className="flex flex-col items-center gap-4">
-            <p className="text-sm text-zinc-400">Follow the journey</p>
-            <div className="flex gap-4">
-              {socials.map((s, i) => (
-                <motion.a
-                  key={s.label}
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={s.label}
-                  initial={{ opacity: 0, scale: 0.6 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{
-                    delay: 0.3 + i * 0.1,
-                    type: "spring",
-                    damping: 14,
-                    stiffness: 160,
-                  }}
-                  whileHover={{ scale: 1.15, y: -4 }}
-                  whileTap={{ scale: 0.92 }}
-                  className="flex h-12 w-12 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-colors hover:border-pink-400/60 hover:text-zinc-900"
-                >
-                  {s.icon}
-                </motion.a>
-              ))}
-            </div>
-          </div>
         </motion.div>
 
-        <div className="relative mt-auto flex flex-col items-center gap-3 border-t border-zinc-200/70 pb-8 pt-6 text-center">
+        <div className="relative mt-10 flex flex-col items-center gap-3 border-t border-zinc-200/70 pb-8 pt-6 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
